@@ -32,7 +32,11 @@ enum C {
   C = "c",
 }
 ```
+## Type Helpers
+It's like a function which can recieve params and returns a result.
 
+Type Helpers can receive a type and transform it
 
-
-
+```ts
+type Maybe<T> = T | undefined | null
+```

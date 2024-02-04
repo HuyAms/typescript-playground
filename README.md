@@ -40,3 +40,17 @@ Type Helpers can receive a type and transform it
 ```ts
 type Maybe<T> = T | undefined | null
 ```
+
+## Distributive Property
+When you have a conditional type and the type you are checking is a union, TypeScript will distribute the conditional type over each member of the union
+
+```ts
+type T = A | B | C
+type Result = T extends U ? X : Y
+```
+
+Would result in 
+```ts
+type Result = (A extends U ? X : Y) | (B extends U ? X : Y) | (C extends U ? X : Y)
+```
+

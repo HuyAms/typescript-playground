@@ -28,7 +28,6 @@ const createCache = <TValue>(initialCache?: Record<string, TValue>): Cache<TValu
              return createCache(newCache)
          }
         }
-    }
 }
 
 const cache = createCache<number>();

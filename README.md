@@ -75,7 +75,7 @@ const ps: PersonSpan = {
   birth: new Date('1902/06/23'),
 };
 
-// the word extends means  a subset of, if you think about its possible values
+// the word "extends" or "assignable to" means  a subset of, if you think about its possible values
 interface Vector1D {x: number}
 interace Vector2D extends Vector1D {y: number} // Vector2D is a subset of Vector1D, so every values in 2D can assign to 1D
 interace Vector3D extends Vector2D {z: number} // Vector3D is a subset of Vector2D
@@ -123,6 +123,176 @@ enum C {
   B = 'b',
   C = 'c',
 }
+```
+
+## Apply Types to Entire Fucntion Expressions When Possible
+
+Instead of
+
+```ts
+function add(a: number, b: number) {
+  return a + b;
+}
+function sub(a: number, b: number) {
+  return a - b;
+}
+function mul(a: number, b: number) {
+  return a * b;
+}
+function div(a: number, b: number) {
+  return a / b;
+}
+```
+
+We can just do
+
+```ts
+type BinaryFn = (a: number, b: number) => number;
+
+const add: BinaryFn = (a, b) => a + b;
+const sub: BinaryFn = (a, b) => a - b;
+const mul: BinaryFn = (a, b) => a * b;
+const div: BinaryFn = (a, b) => a / b;
+```
+
+Also let's say we are building a function on top of i.e `fetch`
+
+```ts
+async function checkedFetch(input: RequestInfo, init?: RequestInit) {}
+
+// better
+const checkedFetch: typeof fetch = async (input, init) => {};
+```
+
+## Avoid Including null or undefined in Type Aliases
+
+Instead of
+
+```ts
+// here consumers will just asume User is not null
+type User = {id: string; name: string} | null;
+```
+
+Do
+
+```ts
+type OptionalUser = {id: string; name: string} | null;
+
+type NullableUser = {id: string; name: string} | null;
+```
+
+Values are easier to work with when they’re either completely null or completely non- null, rather than a mix. Avoid designs in which one value being null or not null is implicitly related to another value being null or not null.
+
+Instead of
+
+```ts
+// Here user or posts can be null
+class UserPosts {
+  user: UserInfo | null;
+  posts: Post[] | null;
+  constructor() {
+    this.user = null;
+    this.posts = null;
+  }
+  async init(userId: string) {
+    return Promise.all([
+      async () => (this.user = await fetchUser(userId)),
+      async () => (this.posts = await fetchPostsForUser(userId)),
+    ]);
+  }
+  getUserName() {
+    // ...?
+  }
+}
+```
+
+Do
+
+```ts
+// Now the UserPosts class is fully non-null
+class UserPosts {
+  user: UserInfo;
+  posts: Post[];
+  constructor(user: UserInfo, posts: Post[]) {
+    this.user = user;
+    this.posts = posts;
+  }
+  static async init(userId: string): Promise<UserPosts> {
+    const [user, posts] = await Promise.all([fetchUser(userId), fetchPostsForUser(userId)]);
+    return new UserPosts(user, posts);
+  }
+  getUserName() {
+    return this.user.name;
+  }
+}
+```
+
+## Prefer Unions of Interfaces to Interfaces with Unions
+
+Don't
+
+```ts
+interface Layer {
+  layout: FillLayout | LineLayout | PointLayout;
+  paint: FillPaint | LinePaint | PointPaint;
+}
+```
+
+Do
+
+```ts
+interface FillLayer {
+  type: 'fill';
+  layout: FillLayout;
+  paint: FillPaint;
+}
+interface LineLayer {
+  type: 'line';
+  layout: LineLayout;
+  paint: LinePaint;
+}
+interface PointLayer {
+  type: 'paint';
+  layout: PointLayout;
+  paint: PointPaint;
+}
+
+// tag union or discriminant union
+type Layer = FillLayer | LineLayer | PointLayer;
+```
+
+Don't
+
+```ts
+interface Person {
+  name: string;
+  // These will either both be present or not be present placeOfBirth?: string;
+  dateOfBirth?: Date;
+}
+```
+
+Do
+
+Consider whether multiple optional properties could be grouped to more accu‐ rately model your data.
+
+```ts
+interface Person {
+  name: string;
+  birth?: {
+    place: string;
+    date: Date;
+  };
+}
+
+// OR
+interface Name {
+  name: string;
+}
+interface PersonWithBirth extends Name {
+  placeOfBirth: string;
+  dateOfBirth: Date;
+}
+type Person = Name | PersonWithBirth;
 ```
 
 ## Type Helpers

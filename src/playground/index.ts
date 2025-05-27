@@ -1,17 +1,10 @@
-class UserPosts {
-  user: UserInfo | null;
-  posts: Post[] | null;
-  constructor() {
-    this.user = null;
-    this.posts = null;
-  }
-  async init(userId: string) {
-    return Promise.all([
-      async () => (this.user = await fetchUser(userId)),
-      async () => (this.posts = await fetchPostsForUser(userId)),
-    ]);
-  }
-  getUserName() {
-    // ...?
-  }
+interface Person {
+  name: string;
 }
+interface PossiblyAgedPerson extends Person {
+  age?: number;
+}
+const p1 = {name: 'Serena', age: '42 years'};
+const p2: Person = p1;
+const p3: PossiblyAgedPerson = p2;
+console.log(`${p3.name} is ${p3.age?.toFixed(1)} years old.`);

@@ -295,6 +295,46 @@ interface PersonWithBirth extends Name {
 type Person = Name | PersonWithBirth;
 ```
 
+## Working with any
+
+Prefer more precise forms of any
+
+```ts
+const a: any;
+
+// more prefferable way to provide a more "precise" any
+const a: any[];
+const a: Record<string, any>;
+```
+
+Hide Unsafe Type Assertions in Well-Typed Functions
+
+```ts
+// checkedFetchJSON returns unknown
+
+// Don't return unknown as it's gonna to speard out to the whole project
+export async function fetchPeak(peakId: string): Promise<unknown> {
+  return checkedFetchJSON(`/api/mountain-peaks/${peakId}`); // OK
+}
+
+// Do: Type Assertions in a function and return a well-typed response
+export async function fetchPeak(peakId: string): Promise<MountainPeak> {
+  return checkedFetchJSON(`/api/mountain-peaks/${peakId}`) as MountainPeak; // OK
+}
+```
+
+## Object and Array look up
+
+I found this very funny
+
+```ts
+type IdToName = {[id: string]: string};
+const ids: IdToName = {'007': 'James Bond'};
+
+// agent is undefined but TS sees it as a string => this can cause a runtime error
+const agent = ids['008'];
+```
+
 ## Type Helpers
 
 It's like a function which can recieve params and returns a result.

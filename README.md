@@ -325,7 +325,7 @@ export async function fetchPeak(peakId: string): Promise<MountainPeak> {
 
 ## Object and Array look up
 
-I found this very funny
+I found this very funny. So be careful
 
 ```ts
 type IdToName = {[id: string]: string};
@@ -333,6 +333,52 @@ const ids: IdToName = {'007': 'James Bond'};
 
 // agent is undefined but TS sees it as a string => this can cause a runtime error
 const agent = ids['008'];
+```
+
+## Think of Generics as Functions Between Types
+
+- In value-land, functions are one of the key ways to factor out repeated code. In type-land, the equivalent of a function is a generic type.
+
+- Always need to think about how your generic type will behave with union types.
+
+👉 Notes when working with Generic
+
+- Type Parameters Should Appear Twice
+- Type parameters are for relating the types of multiple values. If a type parameter is only used once in the function signature, it’s not relating anything.
+
+**Rule:** If a type parameter only appears in one location, strongly reconsider if you actually need it.
+
+👉 Example:
+
+```ts
+// The generic T appears twice after its declaration => it's good
+// it describes that the return type is the same as arg
+function identity<T>(arg: T): T {
+  //           (decl.)    1    2 return arg;
+}
+
+// A, B appears only one => bad
+function third<A, B, C>(a: A, b: B, c: C): C {
+  return c;
+}
+
+// Better: Unneeded type parameters can often be replaced with the unknown type.
+function third<C>(a: unknown, b: unknown, c: C): C {
+  return c;
+}
+
+// T appears once
+interface Lengthy {
+  length: number;
+}
+function getLength<T extends Lengthy>(x: T) {
+  return x.length;
+}
+
+// Better
+function getLength(x: Lengthy) {
+  return x.length;
+}
 ```
 
 ## Type Helpers
@@ -358,6 +404,121 @@ Would result in
 
 ```ts
 type Result = (A extends U ? X : Y) | (B extends U ? X : Y) | (C extends U ? X : Y);
+```
+
+Unions only distribute over conditional types if the condition is a bare type (T extends ...). So to prevent distribution, we need to com‐ plicate the expression a bit. The standard way to do this is to wrap T in a one-element tuple type, [T]
+
+```ts
+// to prevent distribution
+type Comparable<T> = [T] extends [Date]
+  ? Date | number
+  : [T] extends [number]
+  ? number
+  : [T] extends [string]
+  ? string
+  : never;
+
+let dateOrStr = Math.random() < 0.5 ? new Date() : 'A';
+isLessThan(dateOrStr, 'B'); // should yield error
+```
+
+Conditional types have two other surprising behaviors that you should be aware of when they distribute over the boolean and never types
+
+```ts
+type CelebrateIfTrue<V> = V extends true ? 'Huzzah!' : never;
+
+type SurpriseParty = CelebrateIfTrue<boolean>;
+// ^? type SurpriseParty = "Huzzah!"
+```
+
+We wouldn't expect **boolean extends true to be true**. It's because boolean is a union.
+
+```ts
+type SurpriseParty
+= CelebrateIfTrue<boolean>
+= CelebrateIfTrue<true | false>
+= CelebrateIfTrue<true> | CelebrateIfTrue<false> = "Huzzah!" | never
+= "Huzzah!";
+
+// we can prevent that
+type CelebrateIfTrue<V> = [V] extends [true] ? 'Huzzah!' : never;
+```
+
+## Type Map pattern
+
+How does TS know to return HTMLImageElement when you pass `img`
+
+```ts
+const img = document.querySelector('img'); // ^? const img: HTMLImageElement | null
+```
+
+It defines a map
+
+```ts
+interface HTMLElementTagNameMap {
+  a: HTMLAnchorElement;
+  abbr: HTMLElement;
+  address: HTMLElement;
+  area: HTMLAreaElement; // ... many more ... "video": HTMLVideoElement; "wbr": HTMLElement;
+}
+
+querySelector<K extends keyof HTMLElementTagNameMap>(selectors: K): HTMLElementTagNameMap[K] | null;
+```
+
+## Types Display
+
+```ts
+type PartiallyPartial<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
+
+interface BlogComment {
+  commentId: number;
+  title: string;
+  content: string;
+}
+
+type PartComment = PartiallyPartial<BlogComment, 'title'>;
+// // //
+^? type PartComment =
+       Partial<Pick<BlogComment, "title">> &
+       Omit<BlogComment, "title">
+```
+
+Solution is to use the **Resolve**
+
+```ts
+type Resolve<T> = T extends Function ? T : {[K in keyof T]: T[K]};
+
+type PartiallyPartial<T, K extends keyof T> = Resolve<Partial<Pick<T, K>> & Omit<T, K>>;
+
+type PartComment = PartiallyPartial<BlogComment, 'title'>;
+// ^? type PartComment = {
+// title?: string | undefined;
+// commentId: number;
+// content: string;
+// }
+```
+
+## Template Literal types
+
+Template literal types offer a unique way for capturing patterns and relationships in strings.
+
+```ts
+// interesting usage of infer
+type ToCamel<T extends string> = T extends `${infer Prefix}_${infer Suffix}`
+  ? `${Prefix}${Capitalize<Suffix>}`
+  : T;
+
+type ObjectToCamel<T extends object> = {
+  [K in keyof T as ToCamel<K & string>]: T[K];
+};
+
+function objectToCamel<T extends object>(obj: T): ObjectToCamel<T> {
+  const out: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[camelCase(k)] = v;
+  }
+  return out;
+}
 ```
 
 ## Literal Inference in Generics

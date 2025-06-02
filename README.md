@@ -477,10 +477,9 @@ interface BlogComment {
 }
 
 type PartComment = PartiallyPartial<BlogComment, 'title'>;
-// // //
-^? type PartComment =
-       Partial<Pick<BlogComment, "title">> &
-       Omit<BlogComment, "title">
+// ^? type PartComment =
+//        Partial<Pick<BlogComment, "title">> &
+//        Omit<BlogComment, "title">
 ```
 
 Solution is to use the **Resolve**

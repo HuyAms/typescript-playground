@@ -620,3 +620,132 @@ function drawShape(shape: Shape, context: CanvasRenderingContext2D) {
   }
 }
 ```
+
+## Interate over object
+
+```ts
+const obj = {one: 'uno', two: 'dos', three: 3};
+
+// k is inferred as string
+
+for (const k in obj) {
+  const v = obj[k];
+  // ~~~~~~ Element implicitly has an 'any' type
+  // because type ... has no index signature
+}
+```
+
+One solution is to case with `as`
+
+```ts
+const obj = {one: 'uno', two: 'dos', three: 3};
+
+for (const k in obj) {
+  const v = obj[k as keyof typeof obj];
+}
+```
+
+However, it's not safe, considering this case
+
+```ts
+interface ABC {
+  a: string;
+  b: string;
+  c: number;
+}
+
+function foo(abc: ABC) {
+  for (const k in abc) {
+    //       ^? const k: string
+    const v = abc[k];
+    // ~~~~~~ Element implicitly has an 'any' type
+    // because type 'ABC' has no index signature
+  }
+}
+
+const x = {a: 'a', b: 'b', c: 2, d: new Date()};
+foo(x); // OK but we don't care about the d
+```
+
+A better way so we don't need to use type cast is to use `Object.entries`
+
+```ts
+function foo2(abc: ABC) {
+  for (const [k, v] of Object.entries(abc)) {
+    //        ^? const k: string
+    console.log(v);
+    //          ^? const v: any
+  }
+}
+```
+
+## Use Record types to Keep Values in Sync
+
+We want to trigger updates only when specific props change. To avoid forgetting to update the `shouldUpdate` logic when new props are added, we can use TypeScript to enforce synchronization.
+
+By declaring a `REQUIRES_UPDATE` object as a **Record<keyof ScatterProps, boolean>**, TypeScript ensures it's always in sync with `ScatterProps`. If a co-worker adds a new prop, they must also handle it in `REQUIRES_UPDATE`, or the code won’t compile.
+
+```ts
+interface ScatterProps {
+  // The data
+  xs: number[];
+  ys: number[];
+  // Display
+  xRange: [number, number];
+  yRange: [number, number];
+  color: string;
+  // Events
+  onClick?: (x: number, y: number, index: number) => void;
+}
+
+const REQUIRES_UPDATE: Record<keyof ScatterProps, boolean> = {
+  xs: true,
+  ys: true,
+  xRange: true,
+  yRange: true,
+  color: true,
+  onClick: false,
+};
+
+function shouldUpdate(oldProps: ScatterProps, newProps: ScatterProps) {
+  for (const kStr in oldProps) {
+    const k = kStr as keyof ScatterProps;
+    if (oldProps[k] !== newProps[k] && REQUIRES_UPDATE[k]) {
+      return true;
+    }
+  }
+  return false;
+}
+```
+
+## Use Rest Parameters and Tuple Types to Model Variadic Functions
+
+We want the number of params of the `buildURL` depends on the route. Eg: the `/`route requires no aditional pram.
+
+```ts
+interface RouteQueryParams {
+  '/': null;
+  '/search': {query: string; language?: string};
+}
+
+function buildURL<K extends keyof RouteQueryParams>(route: K, params: RouteQueryParams[K]) {
+  return route + (params ? `?${new URLSearchParams(params)}` : '');
+}
+
+buildURL('/search', {query: 'r', language: 'en'}); // 2 params
+
+buildURL('/', null); // it's not bad if we required to pass null. However, passing nothing would be a better experience
+buildURL('/'); // 1 param should be ok
+```
+
+**Solution:** Use rest parameters and tuple types to model functions whose signature depends on the type of an argument.
+
+```ts
+function buildURL<Path extends keyof RouteQueryParams>(
+  route: Path,
+  ...args: RouteQueryParams[Path] extends null ? [] : [params: RouteQueryParams[Path]]
+) {
+  const params = args ? args[0] : null;
+  return route + (params ? `?${new URLSearchParams(params)}` : '');
+}
+```

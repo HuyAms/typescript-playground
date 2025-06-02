@@ -585,3 +585,38 @@ const acceptsValueInAnObject = <T1 extends string>(obj: {input: T}) => {
   return obj.input;
 };
 ```
+
+---
+
+# Recipes
+
+## Use Never Types to Perform Exhaustiveness Checking
+
+Avoid missing case in `switch`
+
+```ts
+type Shape = Box | Circle | Line;
+
+function assertUnreachable(value: never): never {
+  throw new Error(`Missed a case! ${value}`);
+}
+
+function drawShape(shape: Shape, context: CanvasRenderingContext2D) {
+  switch (shape.type) {
+    case 'box':
+      context.rect(...shape.topLeft, ...shape.size);
+      break;
+    case 'circle':
+      context.arc(...shape.center, shape.radius, 0, 2 * Math.PI);
+      break;
+    // we forgot to handle the Line
+    default:
+      // Argument of type 'Line' is not assignable to parameter of type 'never'.ts(2345)
+      assertUnreachable(shape);
+
+    // or we can do
+    // shape satisfies never;
+    // throw new Error(`Missed a case: ${shape}`);
+  }
+}
+```

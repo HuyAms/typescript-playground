@@ -1,7 +1,37 @@
-type T123 = '1' | '2' | '3';
+type Coord = [x: number, y: number];
+interface Box {
+  type: 'box';
+  topLeft: Coord;
+  size: Coord;
+}
+interface Circle {
+  type: 'circle';
+  center: Coord;
+  radius: number;
+}
+interface Line {
+  type: 'line';
+  start: Coord;
+  end: Coord;
+}
+type Shape = Box | Circle | Line;
 
-type T1 = Exclude<T123, '2'>;
+function assertUnreachable(value: never): never {
+  throw new Error(`Missed a case! ${value}`);
+}
 
-type T2 = Exclude<T123, '1'>;
-
-type T3 = Exclude<T123, '3'>;
+function drawShape(shape: Shape, context: CanvasRenderingContext2D) {
+  switch (shape.type) {
+    case 'box':
+      context.rect(...shape.topLeft, ...shape.size);
+      break;
+    case 'circle':
+      context.arc(...shape.center, shape.radius, 0, 2 * Math.PI);
+      break;
+    case 'line':
+      context.arc(...shape.center, shape.radius, 0, 2 * Math.PI);
+      break;
+    default:
+      shape satisfies never;
+  }
+}
